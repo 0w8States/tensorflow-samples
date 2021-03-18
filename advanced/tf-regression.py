@@ -19,7 +19,7 @@ import time
 
 t0 = time.time()
 
-# Constants
+# CONSTANTS
 EPOCHS = 100
 DATASET_FRACTION = 0.995 # Use 99.5% for training, 0.5% for testing
 
@@ -88,8 +88,14 @@ normalizer.adapt(np.array(train_features))
 #  print('\nNormalized:', normalizer(first).numpy())
 
 
+# Normalize Output Force
+outputforce = np.array(train_features['output_force'])
+outputforce_normalizer = preprocessing.Normalization(input_shape=[1,])
+outputforce_normalizer.adapt(outputforce)
 
 
+# Save the test results for later
+test_results = {}
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
@@ -98,65 +104,62 @@ normalizer.adapt(np.array(train_features))
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 # Apply a linear transformation (y=mx+b) to produce 1 output using layers.Dense.
 
-# Normalize Output Force
-outputforce = np.array(train_features['output_force'])
-outputforce_normalizer = preprocessing.Normalization(input_shape=[1,])
-outputforce_normalizer.adapt(outputforce)
-
-# Build the sequential model
-single_regress_model = tf.keras.Sequential([
-    outputforce_normalizer,
-    layers.Dense(units=1)
-])
-
-print("\nSingle Variable Linear Regression Model Details:\n")
-print(single_regress_model.summary())
-
-single_regress_model.compile(
-    optimizer=tf.optimizers.Adam(learning_rate=0.1),
-    loss='mean_absolute_error')
 
 
-history = single_regress_model.fit(
-    train_features['output_force'], train_labels,
-    epochs=EPOCHS,
-    # suppress logging
-    verbose=1,
-    # Calculate validation results on 20% of the training data
-    validation_split = 0.2)
+def single_regression():
+	# Build the sequential model
+	single_regress_model = tf.keras.Sequential([
+	    outputforce_normalizer,
+	    layers.Dense(units=1)
+	])
 
-# Visualize the model's training progress
-#hist = pd.DataFrame(history.history)
-#hist['epoch'] = history.epoch
-#hist.tail()
+	print("\nSingle Variable Linear Regression Model Details:\n")
+	print(single_regress_model.summary())
 
-# Save the test results for later
-test_results = {}
-test_results['single_regress_model'] = single_regress_model.evaluate(
-    test_features['output_force'],
-    test_labels, verbose=0)
+	single_regress_model.compile(
+	    optimizer=tf.optimizers.Adam(learning_rate=0.1),
+	    loss='mean_absolute_error')
 
-# Take a look at some sample predictions of outputforce 10 to 28, 250 samples
-#x = tf.linspace(11.5, 27, 250)
-#y = single_regress_model.predict(x)
-#rpt.plot_predict_randomsample(x,y, 'reports/plots/SingleVarRegression_Prediction.png', train_features, train_labels)
 
-# Plot the model loss
-rpt.plot_loss(history, f'{PLOTS}/SingleVarRegression_Training.png')
+	history = single_regress_model.fit(
+	    train_features['output_force'], train_labels,
+	    epochs=EPOCHS,
+	    # suppress logging
+	    verbose=1,
+	    # Calculate validation results on 20% of the training data
+	    validation_split = 0.2)
 
-# Export some rought prediction results to CSV
-single_regress_model_prediction = single_regress_model.predict(test_features['output_force'])
-rpt.csv_prediction_export(single_regress_model_prediction, test_labels, f'{DATA}/SingleVarRegression_Predictions.csv')
+	# Visualize the model's training progress
+	#hist = pd.DataFrame(history.history)
+	#hist['epoch'] = history.epoch
+	#hist.tail()
 
-# Plot the predictions
-single_regress_model_prediction = single_regress_model.predict(test_features['output_force']).flatten()
-rpt.plot_predict(single_regress_model_prediction, test_labels, f'{PLOTS}/SingleVarRegression_Predictions.png')
+	# Save the test results for later
+	test_results['single_regress_model'] = single_regress_model.evaluate(
+	    test_features['output_force'],
+	    test_labels, verbose=0)
 
-# Plot the error
-rpt.plot_predict_error(single_regress_model_prediction, test_labels, f'{PLOTS}/SingleVarRegression_Error.png')
+	# Take a look at some sample predictions of outputforce 10 to 28, 250 samples
+	#x = tf.linspace(11.5, 27, 250)
+	#y = single_regress_model.predict(x)
+	#rpt.plot_predict_randomsample(x,y, 'reports/plots/SingleVarRegression_Prediction.png', train_features, train_labels)
 
-# Export the model
-single_regress_model.save(f'{MODELS}/single_regress_model')
+	# Plot the model loss
+	rpt.plot_loss(history, f'{PLOTS}/SingleVarRegression_Training.png')
+
+	# Export some rought prediction results to CSV
+	single_regress_model_prediction = single_regress_model.predict(test_features['output_force'])
+	rpt.csv_prediction_export(single_regress_model_prediction, test_labels, f'{DATA}/SingleVarRegression_Predictions.csv')
+
+	# Plot the predictions
+	single_regress_model_prediction = single_regress_model.predict(test_features['output_force']).flatten()
+	rpt.plot_predict(single_regress_model_prediction, test_labels, f'{PLOTS}/SingleVarRegression_Predictions.png')
+
+	# Plot the error
+	rpt.plot_predict_error(single_regress_model_prediction, test_labels, f'{PLOTS}/SingleVarRegression_Error.png')
+
+	# Export the model
+	single_regress_model.save(f'{MODELS}/single_regress_model')
 
 
 
@@ -167,48 +170,48 @@ single_regress_model.save(f'{MODELS}/single_regress_model')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
 # Apply a linear transformation (y=mx+b) except that m is a matrix and b is a vector.
+def multi_regression():
+	multi_regress_model = tf.keras.Sequential([
+	    normalizer,
+	    layers.Dense(units=1)
+	])
 
-multi_regress_model = tf.keras.Sequential([
-    normalizer,
-    layers.Dense(units=1)
-])
+	print("\nMulti-Variable Linear Regression Model Details:\n")
+	print(multi_regress_model.summary())
 
-print("\nMulti-Variable Linear Regression Model Details:\n")
-print(multi_regress_model.summary())
+	multi_regress_model.compile(
+	    optimizer=tf.optimizers.Adam(learning_rate=0.1),
+	    loss='mean_absolute_error')
 
-multi_regress_model.compile(
-    optimizer=tf.optimizers.Adam(learning_rate=0.1),
-    loss='mean_absolute_error')
+	# Train the model
+	history = multi_regress_model.fit(
+	    train_features, train_labels, 
+	    epochs=EPOCHS,
+	    # suppress logging
+	    verbose=1,
+	    # Calculate validation results on 20% of the training data
+	    validation_split = 0.2)
 
-# Train the model
-history = multi_regress_model.fit(
-    train_features, train_labels, 
-    epochs=EPOCHS,
-    # suppress logging
-    verbose=1,
-    # Calculate validation results on 20% of the training data
-    validation_split = 0.2)
+	# Save for later
+	test_results['multi_regress_model'] = multi_regress_model.evaluate(
+	    test_features, test_labels, verbose=0)
 
-# Save for later
-test_results['multi_regress_model'] = multi_regress_model.evaluate(
-    test_features, test_labels, verbose=0)
+	# Plot the model loss
+	rpt.plot_loss(history, f'{PLOTS}/MultiVarRegression_Training.png')
 
-# Plot the model loss
-rpt.plot_loss(history, f'{PLOTS}/MultiVarRegression_Training.png')
+	# Export some rought prediction results to CSV
+	multi_regress_model_prediction = multi_regress_model.predict(test_features)
+	rpt.csv_prediction_export(multi_regress_model_prediction, test_labels, f'{DATA}/MultiVarRegression_Predictions.csv')
 
-# Export some rought prediction results to CSV
-multi_regress_model_prediction = multi_regress_model.predict(test_features)
-rpt.csv_prediction_export(multi_regress_model_prediction, test_labels, f'{DATA}/MultiVarRegression_Predictions.csv')
+	# Plot the predictions
+	multi_regress_model_prediction = multi_regress_model.predict(test_features).flatten()
+	rpt.plot_predict(multi_regress_model_prediction, test_labels, f'{PLOTS}/MultiVarRegression_Predictions.png')
 
-# Plot the predictions
-multi_regress_model_prediction = multi_regress_model.predict(test_features).flatten()
-rpt.plot_predict(multi_regress_model_prediction, test_labels, f'{PLOTS}/MultiVarRegression_Predictions.png')
+	# Plot the error
+	rpt.plot_predict_error(multi_regress_model_prediction, test_labels, f'{PLOTS}/MultiVarRegression_Error.png')
 
-# Plot the error
-rpt.plot_predict_error(multi_regress_model_prediction, test_labels, f'{PLOTS}/MultiVarRegression_Error.png')
-
-# Export the model
-multi_regress_model.save(f'{MODELS}/multi_regress_model')
+	# Export the model
+	multi_regress_model.save(f'{MODELS}/multi_regress_model')
 
 
 
@@ -230,36 +233,38 @@ def build_and_compile_model(norm):
                 optimizer=tf.keras.optimizers.Adam(0.001))
   return model
 
-print("\nSingle Variable DNN Regression Model Details:\n")
-single_dnn_model = build_and_compile_model(outputforce_normalizer)
-print(single_dnn_model.summary())
+def single_dnn():
+	single_dnn_model = build_and_compile_model(outputforce_normalizer)
+	
+	print("\nSingle Variable DNN Regression Model Details:\n")
+	print(single_dnn_model.summary())
 
-history = single_dnn_model.fit(
-    train_features['output_force'], train_labels,
-    validation_split=0.2,
-    verbose=1, epochs=EPOCHS)
+	history = single_dnn_model.fit(
+	    train_features['output_force'], train_labels,
+	    validation_split=0.2,
+	    verbose=1, epochs=EPOCHS)
 
-# Save the model for later
-test_results['single_dnn_model'] = single_dnn_model.evaluate(
-    test_features['output_force'], test_labels,
-    verbose=0)
+	# Save the model for later
+	test_results['single_dnn_model'] = single_dnn_model.evaluate(
+	    test_features['output_force'], test_labels,
+	    verbose=0)
 
-# Plot the model loss
-rpt.plot_loss(history, f'{PLOTS}/SingleVarDNN_Training.png')
+	# Plot the model loss
+	rpt.plot_loss(history, f'{PLOTS}/SingleVarDNN_Training.png')
 
-# Export some rought prediction results to CSV
-single_dnn_model_prediction = single_dnn_model.predict(test_features['output_force'])
-rpt.csv_prediction_export(single_dnn_model_prediction, test_labels, f'{DATA}/SingleVarDNN_Predictions.csv')
+	# Export some rought prediction results to CSV
+	single_dnn_model_prediction = single_dnn_model.predict(test_features['output_force'])
+	rpt.csv_prediction_export(single_dnn_model_prediction, test_labels, f'{DATA}/SingleVarDNN_Predictions.csv')
 
-# Plot the predictions
-single_dnn_model_prediction = single_dnn_model.predict(test_features['output_force']).flatten()
-rpt.plot_predict(single_dnn_model_prediction, test_labels, f'{PLOTS}/SingleVarDNN_Predictions.png')
+	# Plot the predictions
+	single_dnn_model_prediction = single_dnn_model.predict(test_features['output_force']).flatten()
+	rpt.plot_predict(single_dnn_model_prediction, test_labels, f'{PLOTS}/SingleVarDNN_Predictions.png')
 
-# Plot the error
-rpt.plot_predict_error(single_dnn_model_prediction, test_labels, f'{PLOTS}/SingleVarDNN_Error.png')
+	# Plot the error
+	rpt.plot_predict_error(single_dnn_model_prediction, test_labels, f'{PLOTS}/SingleVarDNN_Error.png')
 
-# Export the model
-single_dnn_model.save(f'{MODELS}/single_dnn_model')
+	# Export the model
+	single_dnn_model.save(f'{MODELS}/single_dnn_model')
 
 
 
@@ -270,35 +275,36 @@ single_dnn_model.save(f'{MODELS}/single_dnn_model')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
-multi_dnn_model = build_and_compile_model(normalizer)
+def multi_dnn():
+	multi_dnn_model = build_and_compile_model(normalizer)
 
-print("\nMulti-Variable DNN Regression Model Details:\n")
-print(multi_dnn_model.summary())
+	print("\nMulti-Variable DNN Regression Model Details:\n")
+	print(multi_dnn_model.summary())
 
-history = multi_dnn_model.fit(
-    train_features, train_labels,
-    validation_split=0.2,
-    verbose=1, epochs=EPOCHS)
+	history = multi_dnn_model.fit(
+	    train_features, train_labels,
+	    validation_split=0.2,
+	    verbose=1, epochs=EPOCHS)
 
-# Save the model for later
-test_results['multi_dnn_model'] = multi_dnn_model.evaluate(test_features, test_labels, verbose=0)
+	# Save the model for later
+	test_results['multi_dnn_model'] = multi_dnn_model.evaluate(test_features, test_labels, verbose=0)
 
-# Plot the model loss
-rpt.plot_loss(history, f'{PLOTS}/MultiVarDNN_Training.png')
+	# Plot the model loss
+	rpt.plot_loss(history, f'{PLOTS}/MultiVarDNN_Training.png')
 
-# Export some rought prediction results to CSV
-multi_dnn_model_prediction = multi_dnn_model.predict(test_features)
-rpt.csv_prediction_export(multi_dnn_model_prediction, test_labels, f'{DATA}/MultiVarDNN_Predictions.csv')
+	# Export some rought prediction results to CSV
+	multi_dnn_model_prediction = multi_dnn_model.predict(test_features)
+	rpt.csv_prediction_export(multi_dnn_model_prediction, test_labels, f'{DATA}/MultiVarDNN_Predictions.csv')
 
-# Plot the predictions
-multi_dnn_model_prediction = multi_dnn_model.predict(test_features).flatten()
-rpt.plot_predict(multi_dnn_model_prediction, test_labels, f'{PLOTS}/MultiVarDNN_Predictions.png')
+	# Plot the predictions
+	multi_dnn_model_prediction = multi_dnn_model.predict(test_features).flatten()
+	rpt.plot_predict(multi_dnn_model_prediction, test_labels, f'{PLOTS}/MultiVarDNN_Predictions.png')
 
-# Plot the error
-rpt.plot_predict_error(multi_dnn_model_prediction, test_labels, f'{PLOTS}/MultiVarDNN_Error.png')
+	# Plot the error
+	rpt.plot_predict_error(multi_dnn_model_prediction, test_labels, f'{PLOTS}/MultiVarDNN_Error.png')
 
-# Export the model
-multi_dnn_model.save(f'{MODELS}/multi_dnn_model')
+	# Export the model
+	multi_dnn_model.save(f'{MODELS}/multi_dnn_model')
 
 
 
@@ -309,12 +315,28 @@ multi_dnn_model.save(f'{MODELS}/multi_dnn_model')
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
-print("\nAll Training Results:\n")
-results = pd.DataFrame(test_results, index=['Mean absolute error [Weight]']).T
-print(results)
-results.to_csv(f'{DATA}/Model_Evaluation.csv')
+def print_evaluation():
+	print("\nAll Training Results:\n")
+	results = pd.DataFrame(test_results, index=['Mean absolute error [Weight]']).T
+	print(results)
+	results.to_csv(f'{DATA}/Model_Evaluation.csv')
+
+
+
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+############## MAIN Section ##############
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+#single_regression()
+#mutli_regression()
+#single_dnn()
+multi_dnn()
+print_evaluation()
 
 t1 = time.time()
 total_time = t1-t0
-print("\nTotal Processing Time (s): {}".format(total_time))
+print("\nProgram Complete - Total Processing Time (s): {}".format(total_time))
 
