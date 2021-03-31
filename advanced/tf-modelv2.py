@@ -173,19 +173,20 @@ def single_dnn_normalized():
   with strategy.scope():
     # define model
     model = keras.Sequential()
-    #model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal', input_shape=(1,)))
-    model.add(layers.Dense(64, use_bias=False, kernel_initializer='he_normal', input_shape=(1,)))
-    model.add(layers.BatchNormalization())
-    model.add(layers.Activation("relu"))
-
-    model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal'))
+    model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal', input_shape=(1,), name="layer1"))
+    #model.add(layers.BatchNormalization())
+    model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal', name="layer2"))
+    #model.add(layers.Dense(1, activation='sigmoid'))
     model.add(layers.Dense(1))
+    
     # compile the model
-    model.compile(optimizer='adam', loss='mean_absolute_error')
+    model.compile(optimizer=tf.keras.optimizers.Adam(0.001), loss='mean_absolute_error')
     print("\nSingle-Variable DNN Regression Model Details:\n")
     print(model.summary())
+    # configure early stopping
+    es = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     # fit the model
-    history = model.fit(train_features['output_force'], train_labels, epochs=EPOCHS, verbose=1, validation_split=0.2) # batch_size=32
+    history = model.fit(train_features['output_force'], train_labels, epochs=EPOCHS, verbose=1, validation_split=0.2, callbacks=[es]) # batch_size=32
 
 	# Save the model for later
   test_results['single_dnn_norm_model'] = model.evaluate(test_features['output_force'], test_labels, verbose=0)
